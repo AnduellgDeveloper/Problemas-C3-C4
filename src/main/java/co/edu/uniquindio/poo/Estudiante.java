@@ -3,7 +3,7 @@ package co.edu.uniquindio.poo;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
-import java.util.function.Predicate;
+
 
 /**
  * Clase para manejar la información de un Estudiante
@@ -109,7 +109,7 @@ public class Estudiante {
 
     /**
      * Método para agregar una asistencia a un estudiante.
-     * TODO evitar agregar más de una vez una misma asistencia.
+     * Evitar agregar más de una vez una misma asistencia.
      * 
      * @param asistencia asistencia del estudiante
      */
@@ -131,12 +131,16 @@ public class Estudiante {
     /**
      * 
      * @param claseCurso
-     * @return
+     * @return Si asiste retorna true y sino retorna false 
      */
     public boolean asistioClase(ClaseCurso claseCurso) {
-        Predicate<Asistencia> fechaIgual = j -> j.claseCurso().fechaClase().isEqual(claseCurso.fechaClase());
-        Predicate<Asistencia> asistioPresente = j -> j.tipoAsistencia() == TipoAsistencia.PRESENTE;
-        var asistencia = asistencias.stream().filter(fechaIgual.and(asistioPresente)).findAny();
-        return asistencia.isPresent();
+        for (Asistencia asistencia : asistencias) {
+            if (asistencia.claseCurso().fechaClase().isEqual(claseCurso.fechaClase()) &&
+                asistencia.tipoAsistencia() == TipoAsistencia.PRESENTE) {
+                return true;
+            }
+        }
+        return false;
     }
+    
 }
