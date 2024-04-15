@@ -1,12 +1,15 @@
 
 package co.edu.uniquindio.poo;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.function.Predicate;
+
 
 /**
  * Clase para manejar la información de un curso
@@ -61,11 +64,14 @@ public class Curso {
      *         registrado.
      */
     private boolean validarNumeroIdentificacionExiste(String numeroIdentificacion) {
-
-        Predicate<Estudiante> condicion = estudiante -> estudiante.getNumeroIdentificacion()
-                .equals(numeroIdentificacion);
-        return estudiantes.stream().filter(condicion).findAny().isPresent();
+        for (Estudiante estudiante : estudiantes) {
+            if (estudiante.getNumeroIdentificacion().equals(numeroIdentificacion)) {
+                return true;
+            }
+        }
+        return false;
     }
+    
 
     /**
      * Método para buscar un estudiante dado el número de indicación
@@ -74,10 +80,14 @@ public class Curso {
      * @return Estudiante con el número de indicación indicado o null
      */
     public Optional<Estudiante> obtenerEstudiante(String numeroIdenficacion) {
-        Predicate<Estudiante> condicion = estudiante -> estudiante.getNumeroIdentificacion().equals(numeroIdenficacion);
-
-        return estudiantes.stream().filter(condicion).findAny();
+        for (Estudiante estudiante : estudiantes) {
+            if (estudiante.getNumeroIdentificacion().equals(numeroIdenficacion)) {
+                return Optional.of(estudiante);
+            }
+        }
+        return Optional.empty();
     }
+    
 
     /**
      * Método para obtener la colección NO modificable de los estudiantes del curso
@@ -96,11 +106,11 @@ public class Curso {
      *         orden alfabético
      */
     public Collection<Estudiante> obtenerListadoAlfabetico() {
-        var comparador = Comparator.comparing(Estudiante::getNombres);
-        var estudiantesOrdenados = estudiantes.stream().sorted(comparador).toList();
+        List<Estudiante> estudiantesOrdenados = new ArrayList<>(estudiantes);
+        estudiantesOrdenados.sort(Comparator.comparing(Estudiante::getNombres));
         return Collections.unmodifiableCollection(estudiantesOrdenados);
     }
-
+    
     /**
      * Método para obtener la colección NO modificable de los estudiantes del curso
      * en orden descendente de la edad
@@ -109,9 +119,19 @@ public class Curso {
      *         en el curso descendente por edad.
      */
     public Collection<Estudiante> obtenerListadoEdadDescendente() {
-        var comparador = Comparator.comparing(Estudiante::getEdad).reversed();
-        var estudiantesOrdenados = estudiantes.stream().sorted(comparador).toList();
-        return Collections.unmodifiableCollection(estudiantesOrdenados);
+        List<Estudiante> listaEstudiantes = new ArrayList<>(estudiantes);
+        
+        for (int i = 0; i < listaEstudiantes.size() - 1; i++) {
+            for (int j = 0; j < listaEstudiantes.size() - i - 1; j++) {
+                Estudiante estudianteActual = listaEstudiantes.get(j);
+                Estudiante siguienteEstudiante = listaEstudiantes.get(j + 1);
+                if (estudianteActual.getEdad() < siguienteEstudiante.getEdad()) {
+                    Collections.swap(listaEstudiantes, j, j + 1);
+                }
+            }
+        }
+        
+        return Collections.unmodifiableCollection(listaEstudiantes);
     }
 
     /**
@@ -122,14 +142,18 @@ public class Curso {
      *         son menores de edad.
      */
     public Collection<Estudiante> obtenerListadoMenoresEdad() {
-        return estudiantes.stream()
-                .filter(estudiante -> estudiante.getEdad() < 18)
-                .toList();
+        List<Estudiante> menoresEdad = new ArrayList<>();
+        for (Estudiante estudiante : estudiantes) {
+            if (estudiante.getEdad() < 18) {
+                menoresEdad.add(estudiante);
+            }
+        }
+        return Collections.unmodifiableCollection(menoresEdad);
     }
-
+    
     /**
      * Método para adicionar una nota parcial
-     * TODO: Se puede validar que la suma de los porcentajes no sobrepase en ningún
+     * Se puede validar que la suma de los porcentajes no sobrepase en ningún
      * momento 1.0 (100%)
      * 
      * @param notaParcial nota parcial que se desea adicionar al curso
@@ -144,55 +168,76 @@ public class Curso {
      * @return nota parcial encontrada o un excepción de no entrada.
      */
     public NotaParcial getNotaParcial(String nombreNotaParcial) {
-        Predicate<NotaParcial> nombreIgual = j -> j.nombre().equals(nombreNotaParcial);
-        var posibleNotaParcial = notasParciales.stream().filter(nombreIgual).findAny();
-        assert posibleNotaParcial.isPresent();
-
-        return posibleNotaParcial.get();
+        for (NotaParcial notaParcial : notasParciales) {
+            if (notaParcial.nombre().equals(nombreNotaParcial)) {
+                return notaParcial;
+            }
+        }
+        throw new NoSuchElementException("No se encontró la nota parcial con el nombre especificado.");
     }
-
+    
     /**
      * Método que obtiene la colección de los estudiantes con mayor nota.
      * @return colección de los estudiantes con la mayor nota.
      */
     public Collection<Estudiante> obtenerListadoMayorNota() {
         double mayorNota = obtenerMayorNota();
-
-        return estudiantes.stream()
-                .filter(estudiante -> mayorNota - estudiante.getDefinitiva() <= App.PRECISION)
-                .toList();
+        List<Estudiante> estudiantesConMayorNota = new ArrayList<>();
+    
+        for (Estudiante estudiante : estudiantes) {
+            if (Math.abs(mayorNota - estudiante.getDefinitiva()) <= App.PRECISION) {
+                estudiantesConMayorNota.add(estudiante);
+            }
+        }
+    
+        return Collections.unmodifiableCollection(estudiantesConMayorNota);
     }
-
+    
     /**
      * Método de apoyo (privado) que determinar el valor de la mayor nota definitiva
      * @return mayor nota definitiva de los estudiantes del curso.
      */
     private double obtenerMayorNota() {
-        double mayorNota = estudiantes.stream().map(e -> e.getDefinitiva()).max(Double::compare).get();
-
+        double mayorNota = Double.MIN_VALUE;
+    
+        for (Estudiante estudiante : estudiantes) {
+            double definitiva = estudiante.getDefinitiva();
+            if (definitiva > mayorNota) {
+                mayorNota = definitiva;
+            }
+        }
+    
         return mayorNota;
     }
-
+    
     /**
      * Método para obtener la colección de los estudiantes que perdieron en orden alfabético.
      * @return colección de los estudiantes que perdieron en orden alfabético.
      */
     public Collection<Estudiante> obtenerListadoAlfabeticoPerdieron() {
-        var comparador = Comparator.comparing(Estudiante::getNombres);
-        return estudiantes.stream()
-                .filter(estudiante -> estudiante.getDefinitiva() < App.MINIMA_NOTA)
-                .sorted(comparador)
-                .toList();
+        List<Estudiante> perdieron = new ArrayList<>();
+        for (Estudiante estudiante : estudiantes) {
+            if (estudiante.getDefinitiva() < App.MINIMA_NOTA) {
+                perdieron.add(estudiante);
+            }
+        }
+        Comparator<Estudiante> comparador = Comparator.comparing(Estudiante::getNombres);
+        perdieron.sort(comparador);
+        return Collections.unmodifiableCollection(perdieron);
     }
+    
 
     /**
      * Método para validar que la suma de los porcentajes de las notas parciales esa 1.0 (100%)
      * @return verdadero si la suma de los porcentajes es 1.0 (100%) o tan cercano como la precisión indicada.
      */
     public boolean validarPorcentajes() {
-        double pesoNotas = notasParciales.stream()
-                .mapToDouble(n -> n.porcentaje()).sum();
-        return (1.0 - pesoNotas) <= App.PRECISION;
+        double sumaPorcentajes = 0.0;
+        for (NotaParcial notaParcial : notasParciales) {
+            sumaPorcentajes += notaParcial.porcentaje();
+        }
+        return Math.abs(1.0 - sumaPorcentajes) <= App.PRECISION;
     }
+    
 
 }
